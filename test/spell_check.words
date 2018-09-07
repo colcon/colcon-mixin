@@ -1,6 +1,10 @@
+argcomplete
 args
 basename
 cli
+completers
+dict
+diff
 dirname
 formatter
 mixin
