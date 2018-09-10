@@ -66,6 +66,16 @@ class MixinArgumentDecorator(DestinationCollectorDecorator):
         return self._parser.set_defaults(**{
             k: DefaultValue(v) for (k, v) in kwargs.items()})
 
+    def parse_known_args(self, *args, **kwargs):
+        """Unwrap default values."""
+        known_args, remaining_args = self._parser.parse_known_args(
+            *args, **kwargs)
+        # undo default value wrapping injected in the add_argument() method
+        for k, v in known_args.__dict__.items():
+            if isinstance(v, DefaultValue):
+                setattr(known_args, k, v.value)
+        return (known_args, remaining_args)
+
     def parse_args(self, *args, **kwargs):
         """Add mixin argument for each parser."""
         # mapping of all "leaf" verbs to parsers
