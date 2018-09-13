@@ -73,7 +73,7 @@ def _get_mixins(mixin_path, mixins_by_verb):
     try:
         data = yaml.load(content)
     except Exception as e:
-        logger.warn(
+        logger.warning(
             "Skipping mixin file '%s' since it failed to parse: %s" %
             (mixin_path.absolute(), e))
         return
@@ -82,7 +82,7 @@ def _get_mixins(mixin_path, mixins_by_verb):
         logger.info("Empty mixin file '%s'" % mixin_path.absolute())
         return
     if not isinstance(data, dict):
-        logger.warn(
+        logger.warning(
             "Skipping mixin file '%s' since it doesn't contain a dict" %
             mixin_path.absolute())
         return
@@ -93,7 +93,7 @@ def _get_mixins(mixin_path, mixins_by_verb):
         verb_key = tuple(verb.split('.'))
         for name, args in mixins.items():
             if name in mixins_by_verb[verb_key]:
-                logger.warn(
+                logger.warning(
                     "Mixin '%s' from file '%s' is overwriting another mixin "
                     'with the same name' %
                     (name, mixin_path.absolute()))
