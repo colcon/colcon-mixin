@@ -111,7 +111,7 @@ class MixinArgumentDecorator(DestinationCollectorDecorator):
             for mixin in args.mixin or ():
                 if mixin not in mixins:
                     context = '.'.join(args.mixin_verb)
-                    logger.warn(
+                    logger.warning(
                         "Mixin '{mixin}' is not available for '{context}'"
                         .format_map(locals()))
                     continue
@@ -165,7 +165,7 @@ class MixinArgumentDecorator(DestinationCollectorDecorator):
         destinations = self.get_destinations()
         for mixin_key, mixin_value in mixin_args.items():
             if mixin_key not in destinations:
-                logger.warn(
+                logger.warning(
                     "Mixin key '{mixin_key}' is not a valid argument for "
                     "'{context}'".format_map(locals()))
                 continue
