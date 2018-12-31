@@ -1,13 +1,17 @@
 # Copyright 2018 Dirk Thomas
 # Licensed under the Apache License, Version 2.0
 
+import argparse
 from collections import namedtuple
+import os
+from pathlib import Path
 
 from colcon_core.argument_parser import ArgumentParserDecoratorExtensionPoint
 from colcon_core.argument_parser.destination_collector \
     import DestinationCollectorDecorator
 from colcon_core.logging import colcon_logger
 from colcon_core.plugin_system import satisfies_version
+from colcon_mixin.mixin import add_mixins
 from colcon_mixin.mixin import get_mixins
 
 logger = colcon_logger.getChild(__name__)
@@ -95,11 +99,34 @@ class MixinArgumentDecorator(DestinationCollectorDecorator):
 
         mixins_by_verb = get_mixins()
 
-        # add mixin argument to these parsers
+        # add mixin arguments to these parsers
         # doing this here instead of in the add_parser() method makes sure
-        # the argument is documented at the very end of the help message
+        # the arguments are documented at the very end of the help message
+        groups = {}
+        for p in parsers.values():
+            groups[p] = self._add_mixin_argument_group(p)
+
+        # temporary prevent help action to exit early if help is requested
+        callbacks = {}
+        callback_parser = self._parser.print_help
+        self._parser.print_help = lambda: None
+        for p in parsers.values():
+            callbacks[p] = p.print_help, p.exit
+            p.print_help = p.exit = lambda: None
+        # parse known args to determine if additional mixin files were provided
+        known_args, _ = self._parser.parse_known_args(*args, **kwargs)
+        # restore original callbacks
+        self._parser.print_help = callback_parser
+        for p, t in callbacks.items():
+            p.print_help, p.exit = t
+
+        for mixin_file in (getattr(known_args, 'mixin_files', None) or []):
+            # add mixins from explicitly provided file
+            add_mixins(Path(mixin_file), mixins_by_verb)
+
+        # add the --mixin argument which needs to know all available mixins
         for verb, p in parsers.items():
-            self._add_mixin_argument(p, verb, mixins_by_verb)
+            self._add_mixin_argument(p, groups[p], verb, mixins_by_verb)
 
         args = self._parser.parse_args(*args, **kwargs)
 
@@ -127,10 +154,24 @@ class MixinArgumentDecorator(DestinationCollectorDecorator):
 
         return args
 
-    def _add_mixin_argument(self, parser, verb, mixins_by_verb):
+    def _add_mixin_argument_group(self, parser):
         group = parser.add_argument_group(
             title='Mixin predefined sets of command line parameters')
 
+        argument = group.add_argument(
+            '--mixin-files', nargs='*', metavar='FILE',
+            type=_argparse_existing_file,
+            help='Additional files providing mixins')
+        try:
+            from argcomplete.completers import FilesCompleter
+        except ImportError:
+            pass
+        else:
+            argument.completer = FilesCompleter(['mixin'])
+
+        return group
+
+    def _add_mixin_argument(self, parser, group, verb, mixins_by_verb):
         mixins = mixins_by_verb.get(verb, {})
         descriptions = ''
         for key in sorted(mixins.keys()):
@@ -189,3 +230,13 @@ class MixinArgumentDecorator(DestinationCollectorDecorator):
                     "Skipping mixin key '{mixin_key}' which was passed "
                     'explicitly as a command line argument'
                     .format_map(locals()))
+
+
+def _argparse_existing_file(path):
+    if not os.path.exists(path):
+        raise argparse.ArgumentTypeError(
+            "Path '{path}' does not exist".format_map(locals()))
+    if not os.path.isfile(path):
+        raise argparse.ArgumentTypeError(
+            "Path '{path}' is not a file".format_map(locals()))
+    return path

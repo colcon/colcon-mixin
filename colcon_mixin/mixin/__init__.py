@@ -64,11 +64,18 @@ def get_mixins():
     if mixins_by_verb is None:
         mixins_by_verb = defaultdict(dict)
         for path in get_mixin_files():
-            _get_mixins(Path(path), mixins_by_verb)
+            add_mixins(Path(path), mixins_by_verb)
     return mixins_by_verb
 
 
-def _get_mixins(mixin_path, mixins_by_verb):
+def add_mixins(mixin_path, mixins_by_verb):
+    """
+    Add the mixins from the file to the collection.
+
+    :param Path mixin_path: The path of the mixin file
+    :param dict mixins_by_verb: The nested dictionary of mixins grouped by the
+      verb
+    """
     content = mixin_path.read_text()
     try:
         data = yaml.load(content)
