@@ -106,6 +106,13 @@ class MixinArgumentDecorator(DestinationCollectorDecorator):
         for p in parsers.values():
             groups[p] = self._add_mixin_argument_group(p)
 
+        # add dummy --mixin argument to prevent parse_known_args to interpret
+        # --mixin arguments as --mixin-files
+        mixin_arguments = {}
+        for verb, p in parsers.items():
+            mixin_arguments[verb] = self._add_mixin_argument(
+                p, groups[p], verb)
+
         # temporary prevent help action to exit early if help is requested
         callbacks = {}
         callback_parser = self._parser.print_help
@@ -124,9 +131,9 @@ class MixinArgumentDecorator(DestinationCollectorDecorator):
             # add mixins from explicitly provided file
             add_mixins(Path(mixin_file), mixins_by_verb)
 
-        # add the --mixin argument which needs to know all available mixins
-        for verb, p in parsers.items():
-            self._add_mixin_argument(p, groups[p], verb, mixins_by_verb)
+        # update the --mixin argument help and completer with available mixins
+        for verb, argument in mixin_arguments.items():
+            self._update_mixin_argument(argument, mixins_by_verb.get(verb, {}))
 
         args = self._parser.parse_args(*args, **kwargs)
 
@@ -171,8 +178,18 @@ class MixinArgumentDecorator(DestinationCollectorDecorator):
 
         return group
 
-    def _add_mixin_argument(self, parser, group, verb, mixins_by_verb):
-        mixins = mixins_by_verb.get(verb, {})
+    def _add_mixin_argument(self, parser, group, verb):
+        # the help and completer are skipped for now
+        # they are updated later in _update_mixin_argument
+        argument = group.add_argument(
+            '--mixin', nargs='*', metavar=('mixin1', 'mixin2'))
+
+        # makes the used verb available to choose the corresponding mixins
+        parser.set_defaults(mixin_verb=verb)
+
+        return argument
+
+    def _update_mixin_argument(self, argument, mixins):
         descriptions = ''
         for key in sorted(mixins.keys()):
             args = mixins[key]
@@ -185,12 +202,7 @@ class MixinArgumentDecorator(DestinationCollectorDecorator):
             descriptions = 'The following mixins are available:' + descriptions
         else:
             descriptions = 'No mixins are available for this verb'
-        argument = group.add_argument(
-            '--mixin',
-            nargs='*',
-            # choices=mixins.keys(),
-            metavar=('mixin1', 'mixin2'),
-            help=descriptions)
+        argument.help = descriptions
 
         try:
             from argcomplete.completers import ChoicesCompleter
@@ -198,9 +210,6 @@ class MixinArgumentDecorator(DestinationCollectorDecorator):
             pass
         else:
             argument.completer = ChoicesCompleter(mixins.keys())
-
-        # makes the used verb available to choose the corresponding mixins
-        parser.set_defaults(mixin_verb=verb)
 
     def _update_args(self, args, mixin_args, context):
         destinations = self.get_destinations()
