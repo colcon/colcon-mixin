@@ -9,6 +9,7 @@ from pathlib import Path
 from colcon_core.argument_parser import ArgumentParserDecoratorExtensionPoint
 from colcon_core.argument_parser.destination_collector \
     import DestinationCollectorDecorator
+from colcon_core.argument_parser import SuppressUsageOutput
 from colcon_core.logging import colcon_logger
 from colcon_core.plugin_system import satisfies_version
 from colcon_mixin.mixin import add_mixins
@@ -113,19 +114,8 @@ class MixinArgumentDecorator(DestinationCollectorDecorator):
             mixin_arguments[verb] = self._add_mixin_argument(
                 p, groups[p], verb)
 
-        # temporary prevent help action to exit early if help is requested
-        callbacks = {}
-        callback_parser = self._parser.print_help
-        self._parser.print_help = lambda: None
-        for p in parsers.values():
-            callbacks[p] = p.print_help, p.exit
-            p.print_help = p.exit = lambda: None
-        # parse known args to determine if additional mixin files were provided
-        known_args, _ = self._parser.parse_known_args(*args, **kwargs)
-        # restore original callbacks
-        self._parser.print_help = callback_parser
-        for p, t in callbacks.items():
-            p.print_help, p.exit = t
+        with SuppressUsageOutput([self._parser] + list(parsers.values())):
+            known_args, _ = self._parser.parse_known_args(*args, **kwargs)
 
         for mixin_file in (getattr(known_args, 'mixin_files', None) or []):
             # add mixins from explicitly provided file
