@@ -7,9 +7,9 @@ import os
 from pathlib import Path
 
 from colcon_core.argument_parser import ArgumentParserDecoratorExtensionPoint
+from colcon_core.argument_parser import SuppressUsageOutput
 from colcon_core.argument_parser.destination_collector \
     import DestinationCollectorDecorator
-from colcon_core.argument_parser import SuppressUsageOutput
 from colcon_core.logging import colcon_logger
 from colcon_core.plugin_system import satisfies_version
 from colcon_mixin.mixin import add_mixins
