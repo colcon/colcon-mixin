@@ -64,6 +64,11 @@ class MixinArgumentDecorator(DestinationCollectorDecorator):
         """Wrap default value in a custom class."""
         if 'default' in kwargs:
             kwargs['default'] = DefaultValue(kwargs['default'])
+        # For store_`bool`, the default is the negation
+        elif kwargs.get('action') == 'store_true':
+            kwargs['default'] = DefaultValue(False)
+        elif kwargs.get('action') == 'store_false':
+            kwargs['default'] = DefaultValue(True)
         return super().add_argument(*args, **kwargs)
 
     def set_defaults(self, **kwargs):
