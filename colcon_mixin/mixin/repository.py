@@ -32,7 +32,7 @@ def get_repositories():
     if mixin_repositories_file.is_dir():
         raise IsADirectoryError()
     content = mixin_repositories_file.read_text()
-    data = yaml.load(content)
+    data = yaml.safe_load(content)
     assert isinstance(data, dict), 'The content of the configuration file ' \
         "'%s' should be a dictionary" % mixin_repositories_file
     return data

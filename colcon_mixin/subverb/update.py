@@ -68,7 +68,7 @@ class UpdateMixinSubverb(MixinSubverbExtensionPoint):
 
             # parse the repository index
             try:
-                data = yaml.load(content)
+                data = yaml.safe_load(content)
             except Exception as e:
                 print(' ', str(e), file=sys.stderr)
                 rc = 1
