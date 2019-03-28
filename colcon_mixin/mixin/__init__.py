@@ -78,7 +78,7 @@ def add_mixins(mixin_path, mixins_by_verb):
     """
     content = mixin_path.read_text()
     try:
-        data = yaml.load(content)
+        data = yaml.safe_load(content)
     except Exception as e:
         logger.warning(
             "Skipping mixin file '%s' since it failed to parse: %s" %
