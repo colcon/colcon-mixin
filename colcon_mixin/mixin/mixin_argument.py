@@ -36,6 +36,12 @@ class MixinArgumentParserDecorator(
 DefaultValue = namedtuple(
     'DefaultValue', ('value',))
 
+# verbs which should not get the mixin arguments injected
+VERB_BLACKLIST = {
+    ('metadata', ),  # also matching all subverbs of metadata
+    ('mixin', ),  # also matching all subverbs of mixin
+}
+
 
 class MixinArgumentDecorator(DestinationCollectorDecorator):
     """Inject a mixin argument to every verb with completion."""
@@ -88,6 +94,8 @@ class MixinArgumentDecorator(DestinationCollectorDecorator):
 
     def parse_args(self, *args, **kwargs):
         """Add mixin argument for each parser."""
+        global VERB_BLACKLIST
+
         # mapping of all "leaf" verbs to parsers
         def collect_parsers_by_verb(root, parsers, parent_verbs=()):
             found_any = False
@@ -109,15 +117,20 @@ class MixinArgumentDecorator(DestinationCollectorDecorator):
         # doing this here instead of in the add_parser() method makes sure
         # the arguments are documented at the very end of the help message
         groups = {}
-        for p in parsers.values():
-            groups[p] = self._add_mixin_argument_group(p)
+        for k, p in parsers.items():
+            # match all slices starting from index 0 of k against the blacklist
+            # e.g. k=(a,b,c) it checks against (a), (a,b), (a,b,c)
+            k_prefixes = {k[0:l] for l in range(1, len(k) + 1)}
+            if not k_prefixes & VERB_BLACKLIST:
+                groups[p] = self._add_mixin_argument_group(p)
 
         # add dummy --mixin argument to prevent parse_known_args to interpret
         # --mixin arguments as --mixin-files
         mixin_arguments = {}
         for verb, p in parsers.items():
-            mixin_arguments[verb] = self._add_mixin_argument(
-                p, groups[p], verb)
+            if p in groups:
+                mixin_arguments[verb] = self._add_mixin_argument(
+                    p, groups[p], verb)
 
         with SuppressUsageOutput([self._parser] + list(parsers.values())):
             known_args, _ = self._parser.parse_known_args(*args, **kwargs)
