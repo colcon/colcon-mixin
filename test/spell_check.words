@@ -8,7 +8,6 @@ completers
 defaultdict
 iterdir
 mixins
-namedtuple
 nargs
 noqa
 pathlib

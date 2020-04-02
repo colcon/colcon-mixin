@@ -2,10 +2,12 @@
 # Licensed under the Apache License, Version 2.0
 
 import argparse
-from collections import namedtuple
 import os
 from pathlib import Path
 
+from colcon_core.argument_default import is_default_value
+from colcon_core.argument_default import unwrap_default_value
+from colcon_core.argument_default import wrap_default_value
 from colcon_core.argument_parser import ArgumentParserDecoratorExtensionPoint
 from colcon_core.argument_parser import SuppressUsageOutput
 from colcon_core.argument_parser.destination_collector \
@@ -32,9 +34,6 @@ class MixinArgumentParserDecorator(
     def decorate_argument_parser(self, *, parser):  # noqa: D102
         return MixinArgumentDecorator(parser)
 
-
-DefaultValue = namedtuple(
-    'DefaultValue', ('value',))
 
 # verbs which should not get the mixin arguments injected
 VERB_BLACKLIST = {
@@ -69,18 +68,21 @@ class MixinArgumentDecorator(DestinationCollectorDecorator):
     def add_argument(self, *args, **kwargs):
         """Wrap default value in a custom class."""
         if 'default' in kwargs:
-            kwargs['default'] = DefaultValue(kwargs['default'])
+            default_value = kwargs['default']
+            kwargs['default'] = wrap_default_value(default_value) \
+                if not is_default_value(default_value) else default_value
         # For store_`bool`, the default is the negation
         elif kwargs.get('action') == 'store_true':
-            kwargs['default'] = DefaultValue(False)
+            kwargs['default'] = wrap_default_value(False)
         elif kwargs.get('action') == 'store_false':
-            kwargs['default'] = DefaultValue(True)
+            kwargs['default'] = wrap_default_value(True)
         return super().add_argument(*args, **kwargs)
 
     def set_defaults(self, **kwargs):
         """Wrap default values in a custom class."""
         return self._parser.set_defaults(**{
-            k: DefaultValue(v) for (k, v) in kwargs.items()})
+            k: (wrap_default_value(v) if not is_default_value(v) else v)
+            for (k, v) in kwargs.items()})
 
     def parse_known_args(self, *args, **kwargs):
         """Unwrap default values."""
@@ -88,8 +90,8 @@ class MixinArgumentDecorator(DestinationCollectorDecorator):
             *args, **kwargs)
         # undo default value wrapping injected in the add_argument() method
         for k, v in known_args.__dict__.items():
-            if isinstance(v, DefaultValue):
-                setattr(known_args, k, v.value)
+            if is_default_value(v):
+                setattr(known_args, k, unwrap_default_value(v))
         return (known_args, remaining_args)
 
     def parse_args(self, *args, **kwargs):
@@ -147,8 +149,6 @@ class MixinArgumentDecorator(DestinationCollectorDecorator):
 
         # update args based on selected mixins
         if 'mixin_verb' in args:
-            # unwrap the mixin_verb which is a default value
-            args.mixin_verb = args.mixin_verb.value
             mixins = mixins_by_verb.get(args.mixin_verb, {})
             for mixin in args.mixin or ():
                 if mixin not in mixins:
@@ -164,8 +164,8 @@ class MixinArgumentDecorator(DestinationCollectorDecorator):
 
         # undo default value wrapping injected in the add_argument() method
         for k, v in args.__dict__.items():
-            if isinstance(v, DefaultValue):
-                setattr(args, k, v.value)
+            if is_default_value(v):
+                setattr(args, k, unwrap_default_value(v))
 
         return args
 
@@ -230,7 +230,7 @@ class MixinArgumentDecorator(DestinationCollectorDecorator):
 
             arg_key = destinations[mixin_key]
             arg_value = getattr(args, arg_key)
-            if arg_value is None or isinstance(arg_value, DefaultValue):
+            if arg_value is None or is_default_value(arg_value):
                 logger.debug(
                     "Replacing default value of '{arg_key}' with mixin value: "
                     '{mixin_value}'.format_map(locals()))
