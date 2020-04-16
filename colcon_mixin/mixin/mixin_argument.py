@@ -69,20 +69,18 @@ class MixinArgumentDecorator(DestinationCollectorDecorator):
         """Wrap default value in a custom class."""
         if 'default' in kwargs:
             default_value = kwargs['default']
-            kwargs['default'] = wrap_default_value(default_value) \
-                if not is_default_value(default_value) else default_value
+            kwargs['default'] = _custom_wrap_default_value(default_value)
         # For store_`bool`, the default is the negation
         elif kwargs.get('action') == 'store_true':
-            kwargs['default'] = wrap_default_value(False)
+            kwargs['default'] = _custom_wrap_default_value(False)
         elif kwargs.get('action') == 'store_false':
-            kwargs['default'] = wrap_default_value(True)
+            kwargs['default'] = _custom_wrap_default_value(True)
         return super().add_argument(*args, **kwargs)
 
     def set_defaults(self, **kwargs):
         """Wrap default values in a custom class."""
-        return self._parser.set_defaults(**{
-            k: (wrap_default_value(v) if not is_default_value(v) else v)
-            for (k, v) in kwargs.items()})
+        return self._parser.set_defaults(
+            **{k: _custom_wrap_default_value(v) for (k, v) in kwargs.items()})
 
     def parse_known_args(self, *args, **kwargs):
         """Unwrap default values."""
@@ -91,7 +89,7 @@ class MixinArgumentDecorator(DestinationCollectorDecorator):
         # undo default value wrapping injected in the add_argument() method
         for k, v in known_args.__dict__.items():
             if is_default_value(v):
-                setattr(known_args, k, unwrap_default_value(v))
+                setattr(known_args, k, _custom_unwrap_default_value(v))
         return (known_args, remaining_args)
 
     def parse_args(self, *args, **kwargs):
@@ -165,7 +163,7 @@ class MixinArgumentDecorator(DestinationCollectorDecorator):
         # undo default value wrapping injected in the add_argument() method
         for k, v in args.__dict__.items():
             if is_default_value(v):
-                setattr(args, k, unwrap_default_value(v))
+                setattr(args, k, _custom_unwrap_default_value(v))
 
         return args
 
@@ -247,6 +245,26 @@ class MixinArgumentDecorator(DestinationCollectorDecorator):
                     "Skipping mixin key '{mixin_key}' which was passed "
                     'explicitly as a command line argument'
                     .format_map(locals()))
+
+
+def _custom_wrap_default_value(value):
+    try:
+        value = wrap_default_value(value)
+    except ValueError:
+        # avoid double wrapping and mark those default value to not unwrap them
+        value._mixin_argument_already_default_value = True
+    return value
+
+
+def _custom_unwrap_default_value(value):
+    assert is_default_value(value)
+    try:
+        delattr(value, '_mixin_argument_already_default_value')
+        # don't unwrap default values which haven't been wrapped by
+        # _custom_wrap_default_value
+    except AttributeError:
+        value = unwrap_default_value(value)
+    return value
 
 
 def _argparse_existing_file(path):
