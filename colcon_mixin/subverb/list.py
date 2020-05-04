@@ -2,6 +2,7 @@
 # Licensed under the Apache License, Version 2.0
 
 from colcon_core.plugin_system import satisfies_version
+from colcon_mixin.mixin import get_mixin_files
 from colcon_mixin.mixin.repository import get_repositories
 from colcon_mixin.mixin.repository import get_repository_mixin_files
 from colcon_mixin.subverb import MixinSubverbExtensionPoint
@@ -35,6 +36,7 @@ class ListMixinSubverb(MixinSubverbExtensionPoint):
             return "Passed repository name '{context.args.name}' is unknown" \
                 .format_map(locals())
 
+        mixin_files_from_repos = set()
         for name in sorted(repos.keys()):
             if context.args.name and context.args.name != name:
                 continue
@@ -43,4 +45,12 @@ class ListMixinSubverb(MixinSubverbExtensionPoint):
             mixin_files = get_repository_mixin_files(
                 repository_name=name)
             for path in sorted(mixin_files):
+                print('- {path}'.format_map(locals()))
+                mixin_files_from_repos.add(path)
+
+        mixin_files = get_mixin_files()
+        mixin_files_without_repo = set(mixin_files) - mixin_files_from_repos
+        if mixin_files_without_repo:
+            print('mixin files not associated with a repository')
+            for path in sorted(mixin_files_without_repo):
                 print('- {path}'.format_map(locals()))
