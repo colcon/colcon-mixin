@@ -120,7 +120,7 @@ class MixinArgumentDecorator(DestinationCollectorDecorator):
         for k, p in parsers.items():
             # match all slices starting from index 0 of k against the blacklist
             # e.g. k=(a,b,c) it checks against (a), (a,b), (a,b,c)
-            k_prefixes = {k[0:l] for l in range(1, len(k) + 1)}
+            k_prefixes = {k[0:index] for index in range(1, len(k) + 1)}
             if not k_prefixes & VERB_BLACKLIST:
                 groups[p] = self._add_mixin_argument_group(p)
 
