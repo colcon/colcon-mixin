@@ -151,10 +151,9 @@ class MixinArgumentDecorator(DestinationCollectorDecorator):
             for mixin in args.mixin or ():
                 if mixin not in mixins:
                     context = '.'.join(args.mixin_verb)
-                    logger.warning(
+                    self._parser.error(
                         "Mixin '{mixin}' is not available for '{context}'"
                         .format_map(locals()))
-                    continue
                 mixin_args = mixins[mixin]
                 logger.debug(
                     "Using mixin '{mixin}': {mixin_args}".format_map(locals()))
