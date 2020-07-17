@@ -4,6 +4,8 @@
 import argparse
 import os
 from pathlib import Path
+import sys
+import warnings
 
 from colcon_core.argument_default import is_default_value
 from colcon_core.argument_default import unwrap_default_value
@@ -36,10 +38,25 @@ class MixinArgumentParserDecorator(
 
 
 # verbs which should not get the mixin arguments injected
-VERB_BLACKLIST = {
+VERB_BLOCKLIST = {
     ('metadata', ),  # also matching all subverbs of metadata
     ('mixin', ),  # also matching all subverbs of mixin
 }
+
+if sys.version_info[:2] >= (3, 7):
+    def __getattr__(name):
+        global VERB_BLOCKLIST
+        if name == 'VERB_BLACKLIST':
+            warnings.warn(
+                "'colcon_mixin.mixin.mixin_argument.VERB_BLACKLIST' has been "
+                "deprecated, use 'colcon_mixin.mixin.mixin_argument."
+                "VERB_BLOCKLIST' instead", stacklevel=2)
+            return VERB_BLOCKLIST
+        raise AttributeError(
+            "module '%s' has no attribute '%s'" % (__name__, name))
+else:
+    # for backward compatibility but without a deprecation warning on usage
+    VERB_BLACKLIST = VERB_BLOCKLIST
 
 
 class MixinArgumentDecorator(DestinationCollectorDecorator):
@@ -94,7 +111,7 @@ class MixinArgumentDecorator(DestinationCollectorDecorator):
 
     def parse_args(self, *args, **kwargs):
         """Add mixin argument for each parser."""
-        global VERB_BLACKLIST
+        global VERB_BLOCKLIST
 
         # mapping of all "leaf" verbs to parsers
         def collect_parsers_by_verb(root, parsers, parent_verbs=()):
@@ -118,10 +135,10 @@ class MixinArgumentDecorator(DestinationCollectorDecorator):
         # the arguments are documented at the very end of the help message
         groups = {}
         for k, p in parsers.items():
-            # match all slices starting from index 0 of k against the blacklist
+            # match all slices starting from index 0 of k against the blocklist
             # e.g. k=(a,b,c) it checks against (a), (a,b), (a,b,c)
             k_prefixes = {k[0:index] for index in range(1, len(k) + 1)}
-            if not k_prefixes & VERB_BLACKLIST:
+            if not k_prefixes & VERB_BLOCKLIST:
                 groups[p] = self._add_mixin_argument_group(p)
 
         # add dummy --mixin argument to prevent parse_known_args to interpret
