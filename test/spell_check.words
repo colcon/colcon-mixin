@@ -3,6 +3,7 @@ argcomplete
 argparse
 basenames
 basepath
+blocklist
 colcon
 completers
 defaultdict
@@ -17,6 +18,7 @@ pytest
 rtype
 scspell
 setuptools
+stacklevel
 subparser
 subparsers
 subverb
