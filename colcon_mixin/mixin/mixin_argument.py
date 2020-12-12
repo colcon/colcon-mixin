@@ -14,6 +14,8 @@ from colcon_core.argument_parser import ArgumentParserDecoratorExtensionPoint
 from colcon_core.argument_parser import SuppressUsageOutput
 from colcon_core.argument_parser.destination_collector \
     import DestinationCollectorDecorator
+from colcon_core.argument_parser.type_collector import SuppressTypeConversions
+from colcon_core.argument_parser.type_collector import TypeCollectorDecorator
 from colcon_core.logging import colcon_logger
 from colcon_core.plugin_system import satisfies_version
 from colcon_mixin.mixin import add_mixins
@@ -59,7 +61,9 @@ else:
     VERB_BLACKLIST = VERB_BLOCKLIST
 
 
-class MixinArgumentDecorator(DestinationCollectorDecorator):
+class MixinArgumentDecorator(
+    DestinationCollectorDecorator, TypeCollectorDecorator
+):
     """Inject a mixin argument to every verb with completion."""
 
     def __init__(self, parser):  # noqa: D107
@@ -149,8 +153,11 @@ class MixinArgumentDecorator(DestinationCollectorDecorator):
                 mixin_arguments[verb] = self._add_mixin_argument(
                     p, groups[p], verb)
 
-        with SuppressUsageOutput([self._parser] + list(parsers.values())):
-            known_args, _ = self._parser.parse_known_args(*args, **kwargs)
+        parsers_to_suppress = [self._parser] + list(parsers.values())
+        types_to_omit = [_argparse_existing_file]
+        with SuppressUsageOutput(parsers_to_suppress):
+            with SuppressTypeConversions(parsers_to_suppress, types_to_omit):
+                known_args, _ = self._parser.parse_known_args(*args, **kwargs)
 
         for mixin_file in (getattr(known_args, 'mixin_files', None) or []):
             # add mixins from explicitly provided file
