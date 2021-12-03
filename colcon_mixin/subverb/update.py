@@ -61,7 +61,7 @@ class UpdateMixinSubverb(MixinSubverbExtensionPoint):
             print('fetching {name}: {index_url} ...'.format_map(locals()))
             try:
                 content = load_url(index_url)
-            except Exception as e:
+            except Exception as e:  # noqa: B902
                 print(' ', str(e), file=sys.stderr)
                 rc = 1
                 continue
@@ -69,7 +69,7 @@ class UpdateMixinSubverb(MixinSubverbExtensionPoint):
             # parse the repository index
             try:
                 data = yaml.safe_load(content)
-            except Exception as e:
+            except yaml.YAMLError as e:
                 print(' ', str(e), file=sys.stderr)
                 rc = 1
                 continue
@@ -99,7 +99,7 @@ class UpdateMixinSubverb(MixinSubverbExtensionPoint):
                 print('  fetching {mixin_url} ...'.format_map(locals()))
                 try:
                     content = load_url(mixin_url)
-                except Exception as e:
+                except Exception as e:  # noqa: B902
                     print('  -', str(e), file=sys.stderr)
                     rc = 1
                     continue
