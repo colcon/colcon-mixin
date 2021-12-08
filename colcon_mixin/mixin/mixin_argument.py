@@ -204,7 +204,7 @@ class MixinArgumentDecorator(DestinationCollectorDecorator):
         # the help and completer are skipped for now
         # they are updated later in _update_mixin_argument
         argument = group.add_argument(
-            '--mixin', nargs='*', metavar=('mixin1', 'mixin2'))
+            '-m', '--mixin', nargs='*', metavar=('mixin1', 'mixin2'))
 
         # makes the used verb available to choose the corresponding mixins
         parser.set_defaults(mixin_verb=verb)
