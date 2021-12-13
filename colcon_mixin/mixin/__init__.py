@@ -5,6 +5,7 @@ from collections import defaultdict
 import os
 from pathlib import Path
 
+from colcon_core.environment_variable import EnvironmentVariable
 from colcon_core.location import get_config_path
 from colcon_core.logging import colcon_logger
 import yaml
@@ -13,19 +14,36 @@ logger = colcon_logger.getChild(__name__)
 
 mixins_by_verb = None
 
+"""Environment variable to read additional mixins from"""
+COLCON_MIXIN_PATH = EnvironmentVariable(
+    'COLCON_MIXIN_PATH',
+    'Provide additional directories to look for mixin files. '
+    'Separate individual directories with colons.')
+
 
 def get_mixin_path():
     """
-    Get the path where mixin is stored.
+    Get the path where mixins are stored in the COLCON_HOME configuration.
 
     :rtype: Path
     """
     return get_config_path() / 'mixin'
 
 
+def get_additional_mixin_paths():
+    """
+    Get the paths where additional mixins may be found.
+
+    :rtype: list
+    """
+    # Read additional paths from the environment variable, splitting on :.
+    env_var = os.environ.get(COLCON_MIXIN_PATH.name, "")
+    return [Path(x) for x in env_var.split(":") if x]
+
+
 def get_mixin_files(path=None):
     """
-    Get the paths of all mixin files.
+    Get the paths of all mixin files in a certain path.
 
     The mixin path is recursively being crawled for files ending in `.mixin`.
     Directories starting with a dot (`.`) are being ignored.
@@ -61,10 +79,12 @@ def get_mixins():
     :rtype: dict
     """
     global mixins_by_verb
+    mixin_locations = [get_mixin_path()] + get_additional_mixin_paths()
     if mixins_by_verb is None:
         mixins_by_verb = defaultdict(dict)
-        for path in get_mixin_files():
-            add_mixins(Path(path), mixins_by_verb)
+        for location in mixin_locations:
+            for path in get_mixin_files(location):
+                add_mixins(Path(path), mixins_by_verb)
     return mixins_by_verb
 
 
