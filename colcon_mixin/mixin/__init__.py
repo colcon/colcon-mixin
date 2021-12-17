@@ -36,9 +36,9 @@ def get_additional_mixin_paths():
 
     :rtype: list
     """
-    # Read additional paths from the environment variable, splitting on :.
-    env_var = os.environ.get(COLCON_MIXIN_PATH.name, "")
-    return [Path(x) for x in env_var.split(":") if x]
+    # Read additional paths from the environment variable.
+    env_var = os.environ.get(COLCON_MIXIN_PATH.name, '')
+    return [Path(x) for x in env_var.split(os.pathsep) if x]
 
 
 def get_mixin_files(path=None):
