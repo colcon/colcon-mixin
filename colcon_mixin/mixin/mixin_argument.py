@@ -12,10 +12,14 @@ from colcon_core.argument_default import unwrap_default_value
 from colcon_core.argument_default import wrap_default_value
 from colcon_core.argument_parser import ArgumentParserDecoratorExtensionPoint
 from colcon_core.argument_parser import SuppressUsageOutput
+from colcon_core.argument_parser.action_collector \
+    import ActionCollectorDecorator
+from colcon_core.argument_parser.action_collector \
+    import SuppressRequiredActions
+from colcon_core.argument_parser.action_collector \
+    import SuppressTypeConversions
 from colcon_core.argument_parser.destination_collector \
     import DestinationCollectorDecorator
-from colcon_core.argument_parser.type_collector import SuppressTypeConversions
-from colcon_core.argument_parser.type_collector import TypeCollectorDecorator
 from colcon_core.logging import colcon_logger
 from colcon_core.plugin_system import satisfies_version
 from colcon_mixin.mixin import add_mixins
@@ -62,7 +66,7 @@ else:
 
 
 class MixinArgumentDecorator(
-    DestinationCollectorDecorator, TypeCollectorDecorator
+    DestinationCollectorDecorator, ActionCollectorDecorator
 ):
     """Inject a mixin argument to every verb with completion."""
 
@@ -72,6 +76,7 @@ class MixinArgumentDecorator(
         super().__init__(
             parser,
             _have_args=set(),
+            _mixin_actions=set(),
             _parsers={},
             _subparsers=[])
 
@@ -156,10 +161,12 @@ class MixinArgumentDecorator(
                     p, groups[p], verb)
 
         parsers_to_suppress = [self._parser] + list(parsers.values())
-        types_to_omit = [_argparse_existing_file]
+        omit = self._mixin_actions
         with SuppressUsageOutput(parsers_to_suppress):
-            with SuppressTypeConversions(parsers_to_suppress, types_to_omit):
-                known_args, _ = self._parser.parse_known_args(*args, **kwargs)
+            with SuppressTypeConversions(parsers_to_suppress, omit):
+                with SuppressRequiredActions(parsers_to_suppress, omit):
+                    known_args, _ = self._parser.parse_known_args(
+                        *args, **kwargs)
 
         for mixin_file in (getattr(known_args, 'mixin_files', None) or []):
             # add mixins from explicitly provided file
@@ -200,6 +207,7 @@ class MixinArgumentDecorator(
             '--mixin-files', nargs='*', metavar='FILE',
             type=_argparse_existing_file,
             help='Additional files providing mixins')
+        self._mixin_actions.add(argument)
         try:
             from argcomplete.completers import FilesCompleter
         except ImportError:
@@ -214,6 +222,7 @@ class MixinArgumentDecorator(
         # they are updated later in _update_mixin_argument
         argument = group.add_argument(
             '--mixin', nargs='*', metavar=('mixin1', 'mixin2'))
+        self._mixin_actions.add(argument)
 
         # makes the used verb available to choose the corresponding mixins
         parser.set_defaults(mixin_verb=verb)
