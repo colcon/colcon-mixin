@@ -71,6 +71,7 @@ class MixinArgumentDecorator(
         # pass them as keyword arguments instead
         super().__init__(
             parser,
+            _have_args=set(),
             _parsers={},
             _subparsers=[])
 
@@ -142,8 +143,9 @@ class MixinArgumentDecorator(
             # match all slices starting from index 0 of k against the blocklist
             # e.g. k=(a,b,c) it checks against (a), (a,b), (a,b,c)
             k_prefixes = {k[0:index] for index in range(1, len(k) + 1)}
-            if not k_prefixes & VERB_BLOCKLIST:
+            if not k_prefixes & VERB_BLOCKLIST and p not in self._have_args:
                 groups[p] = self._add_mixin_argument_group(p)
+                self._have_args.add(p)
 
         # add dummy --mixin argument to prevent parse_known_args to interpret
         # --mixin arguments as --mixin-files
