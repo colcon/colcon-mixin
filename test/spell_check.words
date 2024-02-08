@@ -8,12 +8,14 @@ colcon
 completers
 defaultdict
 iterdir
+linter
 mixins
 nargs
 noqa
 pathlib
 plugin
 prepending
+pydocstyle
 pytest
 rtype
 scspell
