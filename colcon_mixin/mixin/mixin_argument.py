@@ -51,7 +51,6 @@ VERB_BLOCKLIST = {
 
 if sys.version_info[:2] >= (3, 7):
     def __getattr__(name):
-        global VERB_BLOCKLIST
         if name == 'VERB_BLACKLIST':
             warnings.warn(
                 "'colcon_mixin.mixin.mixin_argument.VERB_BLACKLIST' has been "
@@ -124,8 +123,6 @@ class MixinArgumentDecorator(
 
     def parse_args(self, *args, **kwargs):
         """Add mixin argument for each parser."""
-        global VERB_BLOCKLIST
-
         # mapping of all "leaf" verbs to parsers
         def collect_parsers_by_verb(root, parsers, parent_verbs=()):
             found_any = False
