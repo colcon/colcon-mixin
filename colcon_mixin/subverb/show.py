@@ -9,7 +9,6 @@ from colcon_mixin.subverb import MixinSubverbExtensionPoint
 def _get_mixin_name_completer(verb_key, mixins_by_verb):
     def mixin_name_completer(prefix, **kwargs):
         """Callable returning a list of mixin names."""
-        nonlocal mixins_by_verb
         args = kwargs.get('parsed_args', {})
         verb = getattr(args, verb_key)
         key = tuple(verb.split('.'))
