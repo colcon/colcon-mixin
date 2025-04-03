@@ -288,6 +288,7 @@ def _custom_wrap_type(original_type):
         if is_default:
             res = _custom_wrap_default_value(value)
         return res
+    return _impl
 
 
 def _custom_wrap_default_value(value):
