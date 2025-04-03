@@ -96,6 +96,9 @@ class MixinArgumentDecorator(
         if 'default' in kwargs:
             default_value = kwargs['default']
             kwargs['default'] = _custom_wrap_default_value(default_value)
+            type_value = kwargs.get('type')
+            if isinstance(default_value, str) and callable(type_value):
+                kwargs['type'] = _custom_wrap_type(type_value)
         # For store_`bool`, the default is the negation
         elif kwargs.get('action') == 'store_true':
             kwargs['default'] = _custom_wrap_default_value(False)
@@ -276,6 +279,16 @@ class MixinArgumentDecorator(
                     "Skipping mixin key '{mixin_key}' which was passed "
                     'explicitly as a command line argument'
                     .format_map(locals()))
+
+
+def _custom_wrap_type(original_type):
+    def _impl(value):
+        is_default = is_default_value(value)
+        res = original_type(value)
+        if is_default:
+            res = _custom_wrap_default_value(value)
+        return res
+    return _impl
 
 
 def _custom_wrap_default_value(value):
