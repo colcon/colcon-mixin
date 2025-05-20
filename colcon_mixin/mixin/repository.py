@@ -75,7 +75,7 @@ def load_url(url, retry=2, retry_period=1, timeout=10):
     try:
         h = urlopen(url, timeout=timeout)
     except HTTPError as e:
-        if e.code == 503 and retry:
+        if e.code in [503, 429] and retry:
             time.sleep(retry_period)
             return load_url(
                 url, retry=retry - 1, retry_period=retry_period * 2,
