@@ -11,6 +11,7 @@ iterdir
 linter
 mixins
 nargs
+netrc
 noqa
 pathlib
 plugin
