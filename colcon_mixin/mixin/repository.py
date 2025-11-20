@@ -40,7 +40,6 @@ if sys.version_info[:2] >= (3, 7):
             f"module '{__name__}' has no attribute '{name}'")
 else:
     # for backward compatibility but without a deprecation warning on usage
-    """The path of the yaml file describing the mixin repositories."""
     mixin_repositories_file = get_mixin_repositories_file()
 
 
