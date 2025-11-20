@@ -49,4 +49,3 @@ def test_mixin_repositories_file():
     with pytest.raises(AttributeError, match='has no attribute'):
         import colcon_mixin.mixin.repository
         colcon_mixin.mixin.repository.does_not_exist
-
