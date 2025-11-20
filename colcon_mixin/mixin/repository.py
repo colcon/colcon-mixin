@@ -37,7 +37,7 @@ if sys.version_info[:2] >= (3, 7):
                 "get_mixin_repositories_file()' instead", stacklevel=2)
             return get_mixin_repositories_file()
         raise AttributeError(
-            "module '%s' has no attribute '%s'" % (__name__, name))
+            f"module '{__name__}' has no attribute '{name}'")
 else:
     # for backward compatibility but without a deprecation warning on usage
     """The path of the yaml file describing the mixin repositories."""
