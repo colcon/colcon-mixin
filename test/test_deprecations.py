@@ -27,7 +27,7 @@ def test_verb_blacklist():
             import does_not_exist  # noqa: F401
 
 
-@patch('colcon_core.location.get_config_path', Path.cwd)
+@patch('colcon_mixin.mixin.repository.get_config_path', Path.cwd)
 def test_mixin_repositories_file():
     if sys.version_info < (3, 7):
         # Older Python doesn't support the syntax to emit this warning
