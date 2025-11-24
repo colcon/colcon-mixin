@@ -26,6 +26,7 @@ subparsers
 subverb
 subverbs
 thomas
+unittest
 urllib
 urlopen
 urls
