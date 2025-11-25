@@ -1,0 +1,4 @@
+---
+mixin:
+  - mixins/build-type.mixin
+  - mixins/coverage.mixin
