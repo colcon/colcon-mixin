@@ -3,10 +3,12 @@
 
 import os
 import socket
+import sys
 import time
 from urllib.error import HTTPError
 from urllib.error import URLError
 from urllib.request import urlopen
+import warnings
 
 from colcon_core.location import get_config_path
 from colcon_core.logging import colcon_logger
@@ -16,8 +18,29 @@ import yaml
 
 logger = colcon_logger.getChild(__name__)
 
-"""The path of the yaml file describing the mixin repositories."""
-mixin_repositories_file = get_config_path() / 'mixin_repositories.yaml'
+
+def get_mixin_repositories_file():
+    """
+    Get the path of the yaml file describing the mixin repositories.
+
+    :rtype: Path
+    """
+    return get_config_path() / 'mixin_repositories.yaml'
+
+
+if sys.version_info[:2] >= (3, 7):
+    def __getattr__(name):
+        if name == 'mixin_repositories_file':
+            warnings.warn(
+                "'colcon_mixin.mixin.repository.mixin_repositories_file' has "
+                "been deprecated, use 'colcon_mixin.mixin.repository."
+                "get_mixin_repositories_file()' instead", stacklevel=2)
+            return get_mixin_repositories_file()
+        raise AttributeError(
+            f"module '{__name__}' has no attribute '{name}'")
+else:
+    # for backward compatibility but without a deprecation warning on usage
+    mixin_repositories_file = get_mixin_repositories_file()
 
 
 def get_repositories():
@@ -26,6 +49,7 @@ def get_repositories():
 
     :rtype: dict
     """
+    mixin_repositories_file = get_mixin_repositories_file()
     if not mixin_repositories_file.exists():
         return {}
     if mixin_repositories_file.is_dir():
@@ -45,6 +69,7 @@ def set_repositories(repositories):
     """
     assert isinstance(repositories, dict), \
         'The passed repositories should be a dictionary'
+    mixin_repositories_file = get_mixin_repositories_file()
     data = yaml.dump(repositories, default_flow_style=False)
     os.makedirs(str(mixin_repositories_file.parent), exist_ok=True)
     with mixin_repositories_file.open('w') as h:
