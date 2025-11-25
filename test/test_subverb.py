@@ -132,7 +132,7 @@ def test_show_mixins(capsys):
 
     assert result is None
 
-    expected_demo_file = Path(__file__).parent.joinpath('expected_mixins', 'demo.txt')
+    expected_demo_file = Path(__file__).parent / 'expected_mixins' / 'demo.txt'
     with expected_demo_file.open('r', encoding='utf-8') as f:
         expected_content = f.read().strip()
 
