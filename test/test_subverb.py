@@ -7,22 +7,22 @@ from unittest.mock import Mock
 
 from colcon_core.command import CommandContext
 from colcon_core.location import set_default_config_path
-import pytest
-
-set_default_config_path(path=Path('/tmp/colcon_mixin_test'))
-
-# Import colcon-mixin modules after config path is set
-# flake8: noqa: E402
 from colcon_mixin.mixin.repository import set_repositories
 from colcon_mixin.subverb.add import (_non_empty_string_without_pathsep,
                                       _url_string, AddMixinSubverb)
 from colcon_mixin.subverb.remove import RemoveMixinSubverb
 from colcon_mixin.subverb.show import ShowMixinSubverb
 from colcon_mixin.subverb.update import UpdateMixinSubverb
+import pytest
 
 
 MIXIN_IDENTIFIER = 'demo'
 TEST_URL = Path(__file__).parent.joinpath('index.yaml').absolute().as_uri()
+
+
+@pytest.fixture(autouse=True, scope='module')
+def colcon_config_path(tmp_path_factory):
+    set_default_config_path(path=tmp_path_factory.mktemp('colcon-mixin.'))
 
 
 @pytest.fixture(autouse=True)
