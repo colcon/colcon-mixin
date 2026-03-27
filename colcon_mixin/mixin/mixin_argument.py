@@ -24,6 +24,7 @@ from colcon_core.logging import colcon_logger
 from colcon_core.plugin_system import satisfies_version
 from colcon_mixin.mixin import add_mixins
 from colcon_mixin.mixin import get_mixins
+from colcon_mixin.mixin import resolve_mixin
 
 logger = colcon_logger.getChild(__name__)
 
@@ -187,7 +188,11 @@ class MixinArgumentDecorator(
                     self._parser.error(
                         "Mixin '{mixin}' is not available for '{context}'"
                         .format_map(locals()))
-                mixin_args = mixins[mixin]
+                try:
+                    mixin_args = resolve_mixin(
+                        args.mixin_verb, mixin, mixins_by_verb)
+                except RuntimeError as e:
+                    self._parser.error(str(e))
                 logger.debug(
                     "Using mixin '{mixin}': {mixin_args}".format_map(locals()))
                 self._update_args(args, mixin_args, '.'.join(args.mixin_verb))

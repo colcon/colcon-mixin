@@ -125,3 +125,60 @@ def add_mixins(mixin_path, mixins_by_verb):
                     'with the same name' %
                     (name, mixin_path.absolute()))
             mixins_by_verb[verb_key][name] = args
+
+
+def resolve_mixin(verb_key, mixin_name, mixins_by_verb, _resolving=None):
+    """
+    Resolve a mixin by flattening its composed references.
+
+    Referenced mixins are resolved left-to-right, then the mixin's own
+    arguments are merged on top. Precedence matches the CLI behavior of
+    _update_args: lists use prepending order, first scalar wins between
+    references, own scalars always override.
+
+    :param tuple verb_key: The verb tuple
+    :param str mixin_name: The name of the mixin to resolve
+    :param dict mixins_by_verb: The full mixin collection
+    :param set _resolving: Internal set for cycle detection
+    :raises RuntimeError: On cycles or missing references
+    :rtype: dict
+    """
+    if _resolving is None:
+        _resolving = set()
+
+    verb_mixins = mixins_by_verb.get(verb_key, {})
+    if mixin_name not in verb_mixins:
+        raise RuntimeError(
+            "Mixin '%s' referenced in composition does not exist for "
+            "verb '%s'" % (mixin_name, '.'.join(verb_key)))
+
+    if mixin_name in _resolving:
+        raise RuntimeError(
+            'Cycle detected in mixin composition: %s' % mixin_name)
+
+    mixin_def = verb_mixins[mixin_name]
+    refs = mixin_def.get('mixin', [])
+    if not isinstance(refs, list):
+        refs = []
+
+    _resolving.add(mixin_name)
+    resolved = {}
+    for ref in refs:
+        ref_args = resolve_mixin(verb_key, ref, mixins_by_verb, _resolving)
+        for k, v in ref_args.items():
+            if k not in resolved:
+                resolved[k] = v
+            elif isinstance(resolved[k], list) and isinstance(v, list):
+                resolved[k] = v + resolved[k]
+    _resolving.discard(mixin_name)
+
+    for k, v in mixin_def.items():
+        if k == 'mixin':
+            continue
+        if k not in resolved:
+            resolved[k] = v
+        elif isinstance(resolved[k], list) and isinstance(v, list):
+            resolved[k] = v + resolved[k]
+        else:
+            resolved[k] = v
+    return resolved
