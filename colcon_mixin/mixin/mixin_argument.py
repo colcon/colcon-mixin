@@ -252,6 +252,23 @@ class MixinArgumentDecorator(
             argument.completer = ChoicesCompleter(mixins.keys())
 
     def _update_args(self, args, mixin_args, context):
+        """
+        Update parsed arguments with mixin-provided arguments.
+
+        Applies arguments from a mixin to the parsed arguments namespace.
+        The merging strategy is:
+        - Lists: extended (mixin values prepended to command-line values)
+        - Scalars: replaced (mixin value overrides default)
+        - Explicit values: kept (command-line args take precedence)
+
+        In future versions supporting mixin referencing (issue #39),
+        referenced mixin args will be applied first, then referencing
+        mixin args will override or extend them.
+
+        :param args: Parsed arguments namespace to update
+        :param dict mixin_args: Arguments from the selected mixin
+        :param str context: Verb context (e.g., 'build', 'test') for error messages
+        """
         destinations = self.get_destinations()
         for mixin_key, mixin_value in mixin_args.items():
             if mixin_key not in destinations:
