@@ -122,7 +122,12 @@ class MixinArgumentDecorator(
         return (known_args, remaining_args)
 
     def parse_args(self, *args, **kwargs):
-        """Add mixin argument for each parser."""
+        """
+        Add mixin argument for each parser and apply selected mixins.
+        When multiple mixins are applied, they are processed in the order specified by
+        the user. In future versions supporting mixin referencing, referenced mixins will
+        be applied before the mixin that references them.
+        """
         # mapping of all "leaf" verbs to parsers
         def collect_parsers_by_verb(root, parsers, parent_verbs=()):
             found_any = False
