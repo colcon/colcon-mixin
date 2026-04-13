@@ -127,6 +127,37 @@ def add_mixins(mixin_path, mixins_by_verb):
             mixins_by_verb[verb_key][name] = args
 
 
+def _get_mixin_references(verb_key, mixin_name, mixin_def):
+    """
+    Validate and return the composed mixin references for a mixin.
+
+    :param tuple verb_key: The verb tuple
+    :param str mixin_name: The name of the mixin to inspect
+    :param object mixin_def: The raw mixin definition
+    :raises RuntimeError: On malformed mixin definitions
+    :rtype: list
+    """
+    context = '.'.join(verb_key)
+    if not isinstance(mixin_def, dict):
+        raise RuntimeError(
+            "Mixin '%s' for verb '%s' must define a dictionary of arguments" %
+            (mixin_name, context))
+
+    refs = mixin_def.get('mixin', [])
+    if not isinstance(refs, list):
+        raise RuntimeError(
+            "Mixin '%s' for verb '%s' defines reserved key 'mixin' with "
+            'invalid type, expected a list' % (mixin_name, context))
+
+    for ref in refs:
+        if not isinstance(ref, str):
+            raise RuntimeError(
+                "Mixin '%s' for verb '%s' defines reserved key 'mixin' "
+                'with non-string entry %r' % (mixin_name, context, ref))
+
+    return refs
+
+
 def resolve_mixin(verb_key, mixin_name, mixins_by_verb, _resolving=None):
     """
     Resolve a mixin by flattening its composed references.
@@ -157,28 +188,28 @@ def resolve_mixin(verb_key, mixin_name, mixins_by_verb, _resolving=None):
             'Cycle detected in mixin composition: %s' % mixin_name)
 
     mixin_def = verb_mixins[mixin_name]
-    refs = mixin_def.get('mixin', [])
-    if not isinstance(refs, list):
-        refs = []
+    refs = _get_mixin_references(verb_key, mixin_name, mixin_def)
 
     _resolving.add(mixin_name)
-    resolved = {}
-    for ref in refs:
-        ref_args = resolve_mixin(verb_key, ref, mixins_by_verb, _resolving)
-        for k, v in ref_args.items():
+    try:
+        resolved = {}
+        for ref in refs:
+            ref_args = resolve_mixin(verb_key, ref, mixins_by_verb, _resolving)
+            for k, v in ref_args.items():
+                if k not in resolved:
+                    resolved[k] = v
+                elif isinstance(resolved[k], list) and isinstance(v, list):
+                    resolved[k] = v + resolved[k]
+
+        for k, v in mixin_def.items():
+            if k == 'mixin':
+                continue
             if k not in resolved:
                 resolved[k] = v
             elif isinstance(resolved[k], list) and isinstance(v, list):
                 resolved[k] = v + resolved[k]
-    _resolving.discard(mixin_name)
-
-    for k, v in mixin_def.items():
-        if k == 'mixin':
-            continue
-        if k not in resolved:
-            resolved[k] = v
-        elif isinstance(resolved[k], list) and isinstance(v, list):
-            resolved[k] = v + resolved[k]
-        else:
-            resolved[k] = v
-    return resolved
+            else:
+                resolved[k] = v
+        return resolved
+    finally:
+        _resolving.discard(mixin_name)
