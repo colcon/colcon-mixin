@@ -36,7 +36,6 @@ def _parse(argv, mixins=MIXINS):
 
 
 def test_multiple_mixins_preserve_command_line_order():
-    # regression test for issue #40: the resulting list must follow the
     # order the mixins were given on the command line
     args = _parse(['build', '--mixin', 'a', 'b'])
     assert args.cmake_args == ['FOO=A', 'FOO=B']
