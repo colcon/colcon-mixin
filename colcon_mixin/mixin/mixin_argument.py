@@ -193,7 +193,6 @@ class MixinArgumentDecorator(
             # each mixin by prepending its list values, iterating in reverse
             # makes the resulting list follow the order the mixins were given
             # on the command line while keeping any explicit command line
-            # arguments last (see #40)
             for mixin in reversed(args.mixin or ()):
                 mixin_args = mixins[mixin]
                 logger.debug(
