@@ -181,12 +181,19 @@ class MixinArgumentDecorator(
         # update args based on selected mixins
         if 'mixin_verb' in args:
             mixins = mixins_by_verb.get(args.mixin_verb, {})
+            # validate the requested mixins in the order given on the command
+            # line so an error reports the first unavailable mixin
             for mixin in args.mixin or ():
                 if mixin not in mixins:
                     context = '.'.join(args.mixin_verb)
                     self._parser.error(
                         "Mixin '{mixin}' is not available for '{context}'"
                         .format_map(locals()))
+            # apply the mixins in reverse order: since _update_args() handles
+            # each mixin by prepending its list values, iterating in reverse
+            # makes the resulting list follow the order the mixins were given
+            # on the command line while keeping any explicit command line
+            for mixin in reversed(args.mixin or ()):
                 mixin_args = mixins[mixin]
                 logger.debug(
                     "Using mixin '{mixin}': {mixin_args}".format_map(locals()))
