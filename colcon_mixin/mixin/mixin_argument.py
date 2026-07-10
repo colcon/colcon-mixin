@@ -24,6 +24,10 @@ from colcon_core.logging import colcon_logger
 from colcon_core.plugin_system import satisfies_version
 from colcon_mixin.mixin import add_mixins
 from colcon_mixin.mixin import get_mixins
+from colcon_mixin.mixin.order import CircularMixinError
+from colcon_mixin.mixin.order import compute_application_order
+from colcon_mixin.mixin.order import InvalidMixinError
+from colcon_mixin.mixin.order import MissingMixinError
 
 logger = colcon_logger.getChild(__name__)
 
@@ -181,23 +185,36 @@ class MixinArgumentDecorator(
         # update args based on selected mixins
         if 'mixin_verb' in args:
             mixins = mixins_by_verb.get(args.mixin_verb, {})
+            context = '.'.join(args.mixin_verb)
             # validate the requested mixins in the order given on the command
             # line so an error reports the first unavailable mixin
             for mixin in args.mixin or ():
                 if mixin not in mixins:
-                    context = '.'.join(args.mixin_verb)
                     self._parser.error(
                         "Mixin '{mixin}' is not available for '{context}'"
                         .format_map(locals()))
+            # expand each requested mixin into the full list of mixins to
+            # apply: a mixin may reference other mixins through a 'mixin' key,
+            # which are applied first so the requesting mixin can override
+            # them (depth-first post-order, see colcon_mixin.mixin.order)
+            application_order = []
+            for mixin in args.mixin or ():
+                try:
+                    application_order += compute_application_order(
+                        mixins, mixin)
+                except (
+                    CircularMixinError, InvalidMixinError, MissingMixinError,
+                ) as e:
+                    self._parser.error(str(e))
             # apply the mixins in reverse order: since _update_args() handles
             # each mixin by prepending its list values, iterating in reverse
-            # makes the resulting list follow the order the mixins were given
-            # on the command line while keeping any explicit command line
-            for mixin in reversed(args.mixin or ()):
+            # makes the resulting list follow the computed application order
+            # while keeping any explicit command line arguments last
+            for mixin in reversed(application_order):
                 mixin_args = mixins[mixin]
                 logger.debug(
                     "Using mixin '{mixin}': {mixin_args}".format_map(locals()))
-                self._update_args(args, mixin_args, '.'.join(args.mixin_verb))
+                self._update_args(args, mixin_args, context)
 
         # undo default value wrapping injected in the add_argument() method
         for k, v in args.__dict__.items():
@@ -261,6 +278,10 @@ class MixinArgumentDecorator(
     def _update_args(self, args, mixin_args, context):
         destinations = self.get_destinations()
         for mixin_key, mixin_value in mixin_args.items():
+            if mixin_key == 'mixin':
+                # reserved metadata key listing referenced mixins; it is not
+                # an argument to overlay (see colcon_mixin.mixin.order)
+                continue
             if mixin_key not in destinations:
                 logger.warning(
                     "Mixin key '{mixin_key}' is not a valid argument for "
