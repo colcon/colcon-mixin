@@ -3,7 +3,33 @@
 
 from colcon_core.plugin_system import satisfies_version
 from colcon_mixin.mixin import get_mixins
+from colcon_mixin.mixin.order import CircularMixinError
+from colcon_mixin.mixin.order import compute_application_order
+from colcon_mixin.mixin.order import InvalidMixinError
+from colcon_mixin.mixin.order import MissingMixinError
 from colcon_mixin.subverb import MixinSubverbExtensionPoint
+
+
+def _get_application_order(mixins, mixin_name):
+    """
+    Get the order in which a mixin and the mixins it references are applied.
+
+    :param dict mixins: The mixins of a single verb
+    :param str mixin_name: The name of the mixin to resolve
+    :returns: The application order joined by arrows, or None if the mixin
+      doesn't reference any other mixins
+    :rtype: str
+    """
+    if not mixins[mixin_name].get('mixin'):
+        return None
+    try:
+        order = compute_application_order(mixins, mixin_name)
+    except (CircularMixinError, InvalidMixinError, MissingMixinError) as e:
+        # an unresolvable reference is reported here rather than raised, so
+        # that the remaining mixins are still being shown
+        reason = str(e)
+        return 'unavailable ({reason})'.format_map(locals())
+    return ' -> '.join(order)
 
 
 def _get_mixin_name_completer(verb_key, mixins_by_verb):
@@ -71,8 +97,15 @@ class ShowMixinSubverb(MixinSubverbExtensionPoint):
                 else:
                     print('- {mixin_name}'.format_map(locals()))
                 mixin_value = mixins[mixin_name]
+                indent = '  ' if context.args.mixin_name is None else ''
                 for arg_key, arg_value in mixin_value.items():
-                    indent = '  ' if context.args.mixin_name is None else ''
                     print(
                         '{indent}{arg_key}: {arg_value}'
+                        .format_map(locals()))
+                # only shown for mixins referencing other mixins, to make the
+                # resolved order of the composition visible
+                application_order = _get_application_order(mixins, mixin_name)
+                if application_order is not None:
+                    print(
+                        '{indent}application order: {application_order}'
                         .format_map(locals()))
