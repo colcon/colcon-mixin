@@ -20,6 +20,26 @@ SCALAR_MIXINS = {
 }
 
 
+NESTED_MIXINS = {
+    'base': {'cmake-args': ['FOO=BASE']},
+    'child': {'mixin': ['base'], 'cmake-args': ['FOO=CHILD']},
+}
+
+
+SCALAR_NESTED_MIXINS = {
+    'base': {'build-base': 'BASE'},
+    'child': {'mixin': ['base'], 'build-base': 'CHILD'},
+}
+
+
+CANONICAL_MIXINS = {
+    'A': {'mixin': ['B', 'D'], 'cmake-args': ['A']},
+    'B': {'mixin': ['C'], 'cmake-args': ['B']},
+    'C': {'mixin': ['D'], 'cmake-args': ['C']},
+    'D': {'cmake-args': ['D']},
+}
+
+
 def _parse(argv, mixins=MIXINS):
     base = argparse.ArgumentParser(prog='colcon')
     decorator = MixinArgumentDecorator(base)
@@ -88,3 +108,42 @@ def test_unavailable_mixin_reports_first(capsys):
     with pytest.raises(SystemExit):
         _parse(['build', '--mixin', 'bad', 'a'])
     assert "Mixin 'bad' is not available" in capsys.readouterr().err
+
+
+def test_referenced_mixin_applied_before_referencing():
+    args = _parse(['build', '--mixin', 'child'], NESTED_MIXINS)
+    assert args.cmake_args == ['FOO=BASE', 'FOO=CHILD']
+
+
+def test_referencing_mixin_overrides_referenced_scalar():
+    args = _parse(['build', '--mixin', 'child'], SCALAR_NESTED_MIXINS)
+    assert args.build_base == 'CHILD'
+
+
+def test_canonical_reference_graph_order():
+    # D appears twice, once per path
+    args = _parse(['build', '--mixin', 'A'], CANONICAL_MIXINS)
+    assert args.cmake_args == ['D', 'C', 'B', 'D', 'A']
+
+
+def test_nested_mixin_command_line_arguments_take_precedence():
+    args = _parse(
+        ['build', '--mixin', 'child', '--cmake-args=FOO=CLI'], NESTED_MIXINS)
+    assert args.cmake_args == ['FOO=BASE', 'FOO=CHILD', 'FOO=CLI']
+
+
+def test_circular_mixin_reference_reports_error(capsys):
+    mixins = {
+        'a': {'mixin': ['b']},
+        'b': {'mixin': ['a']},
+    }
+    with pytest.raises(SystemExit):
+        _parse(['build', '--mixin', 'a'], mixins)
+    assert 'Circular mixin reference' in capsys.readouterr().err
+
+
+def test_unknown_referenced_mixin_reports_error(capsys):
+    mixins = {'a': {'mixin': ['missing']}}
+    with pytest.raises(SystemExit):
+        _parse(['build', '--mixin', 'a'], mixins)
+    assert "unknown mixin 'missing'" in capsys.readouterr().err
