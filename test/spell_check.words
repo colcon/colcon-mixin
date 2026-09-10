@@ -4,6 +4,8 @@ argparse
 basenames
 basepath
 blocklist
+capsys
+cmake
 colcon
 completers
 defaultdict
@@ -18,6 +20,7 @@ plugin
 prepending
 pydocstyle
 pytest
+readouterr
 rtype
 scspell
 setuptools
@@ -27,6 +30,7 @@ subparsers
 subverb
 subverbs
 thomas
+unittest
 urllib
 urlopen
 urls

@@ -1,13 +1,19 @@
 ---
 name: Run tests
 
-on:
+on:  # yamllint disable-line rule:truthy
   push:
     branches: ['master']
   pull_request:
+  workflow_dispatch:
 
 jobs:
   pytest:
     uses: colcon/ci/.github/workflows/pytest.yaml@main
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+  yamllint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: yamllint -f github .
