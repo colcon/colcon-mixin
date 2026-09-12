@@ -12,5 +12,6 @@ artifacts:
             - ubuntu:focal
             - ubuntu:jammy
             - ubuntu:noble
+            - ubuntu:resolute
             - debian:bookworm
             - debian:trixie
