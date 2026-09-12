@@ -109,6 +109,8 @@ def load_url(url, retry=2, retry_period=1, timeout=10, auth=NETRC):
         auth = None
         try:
             entry = netrc.netrc().authenticators(request.origin_req_host)
+        except FileNotFoundError:
+            pass
         except netrc.NetrcParseError:
             logger.exception('Failed to parse netrc file, skipping...')
         else:
