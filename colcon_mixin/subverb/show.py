@@ -4,6 +4,7 @@
 from colcon_core.plugin_system import satisfies_version
 from colcon_mixin.mixin import get_mixins
 from colcon_mixin.subverb import MixinSubverbExtensionPoint
+import yaml
 
 
 def _get_mixin_name_completer(verb_key, mixins_by_verb):
@@ -14,6 +15,14 @@ def _get_mixin_name_completer(verb_key, mixins_by_verb):
         key = tuple(verb.split('.'))
         return mixins_by_verb.get(key, {}).keys()
     return mixin_name_completer
+
+
+class IndentDumper(yaml.Dumper):
+    """Custom YAML dumper with yamllint compliant indentation."""
+
+    def increase_indent(self, flow=False, indentless=False):
+        """Override to disable indentless option."""
+        return super(IndentDumper, self).increase_indent(flow, False)
 
 
 class ShowMixinSubverb(MixinSubverbExtensionPoint):
@@ -47,32 +56,30 @@ class ShowMixinSubverb(MixinSubverbExtensionPoint):
             context.args.verb and
             tuple(context.args.verb.split('.')) not in self.mixins_by_verb
         ):
-            return "Passed verb name '{context.args.verb}' has no mixins" \
-                .format_map(locals())
+            return f"Passed verb name '{context.args.verb}' has no mixins"
+
+        output_data = {}
 
         for verb in sorted(self.mixins_by_verb.keys()):
             if context.args.verb:
                 if context.args.verb != '.'.join(verb):
                     continue
-            else:
-                verb_space = ' '.join(verb)
-                print('{verb_space}:'.format_map(locals()))
 
+            verb_key = '.'.join(verb)
             mixins = self.mixins_by_verb[verb]
-            for mixin_name in sorted(mixins.keys()):
-                if context.args.mixin_name:
-                    if context.args.mixin_name != mixin_name:
-                        continue
-                    if context.args.mixin_name not in mixins:
-                        return 'Passed mixin name ' \
-                            "'{context.args.mixin_name}' is not defined" \
-                            .format_map(locals())
 
-                else:
-                    print('- {mixin_name}'.format_map(locals()))
-                mixin_value = mixins[mixin_name]
-                for arg_key, arg_value in mixin_value.items():
-                    indent = '  ' if context.args.mixin_name is None else ''
-                    print(
-                        '{indent}{arg_key}: {arg_value}'
-                        .format_map(locals()))
+            # Filter mixins if specific mixin name is requested
+            if context.args.mixin_name:
+                if context.args.mixin_name not in mixins:
+                    return (
+                        f'Passed mixin name "{context.args.mixin_name}"'
+                        ' is not defined'
+                    )
+                output_data[verb_key] = {
+                    context.args.mixin_name: mixins[context.args.mixin_name]
+                }
+            else:
+                output_data[verb_key] = mixins
+
+        print(yaml.dump(output_data, Dumper=IndentDumper,
+                        sort_keys=True, explicit_start=True), end='')
